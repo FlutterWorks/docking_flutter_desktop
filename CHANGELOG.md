@@ -1,3 +1,28 @@
+## 1.4.1+1
+
+* `tabbed_view` dependency updated to 1.14.0+1
+
+## 1.4.1
+
+* Bugfix
+  * Maximizing DockingItem disposes DockingItem's where keepAlive is set true.
+* `tabbed_view` dependency updated to 1.14.0
+
+## 1.4.0
+
+* New `Docking` parameter: `maximizableTabsArea`
+* `Docking.maximizableTabs` parameter has been renamed to `Docking.maximizableTab` 
+* Bugfix
+  * Non maximizable `DockingItem` can be maximized.
+  
+## 1.3.0
+
+* Allow changing DockingLayout root.
+* Bugfix
+  * Memory leak in DockingLayout listeners.    
+* `tabbed_view` dependency updated to 1.13.0+1
+* `multi_split_view` dependency updated to 2.1.0
+
 ## 1.2.0+1
 
 * Updating the README

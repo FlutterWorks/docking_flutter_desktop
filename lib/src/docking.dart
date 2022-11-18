@@ -19,7 +19,8 @@ class Docking extends StatefulWidget {
       this.itemCloseInterceptor,
       this.dockingButtonsBuilder,
       this.maximizableItem = true,
-      this.maximizableTabs = true})
+      this.maximizableTab = true,
+      this.maximizableTabsArea = true})
       : super(key: key);
 
   final DockingLayout? layout;
@@ -28,7 +29,8 @@ class Docking extends StatefulWidget {
   final ItemCloseInterceptor? itemCloseInterceptor;
   final DockingButtonsBuilder? dockingButtonsBuilder;
   final bool maximizableItem;
-  final bool maximizableTabs;
+  final bool maximizableTab;
+  final bool maximizableTabsArea;
 
   @override
   State<StatefulWidget> createState() => _DockingState();
@@ -53,10 +55,31 @@ class _DockingState extends State<Docking> {
   }
 
   @override
+  void didUpdateWidget(Docking oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.layout != widget.layout) {
+      oldWidget.layout?.removeListener(_forceRebuild);
+      _dockingDrag.addListener(_forceRebuild);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     if (widget.layout != null) {
       if (widget.layout!.maximizedArea != null) {
-        return _buildArea(context, widget.layout!.maximizedArea!);
+        List<DockingArea> areas = widget.layout!.layoutAreas();
+        List<Widget> children = [];
+        for (DockingArea area in areas) {
+          if (area != widget.layout!.maximizedArea!) {
+            if (area is DockingItem && area.globalKey != null) {
+              // keeping alive other areas
+              children.add(ExcludeFocus(
+                  child: Offstage(child: _buildArea(context, area))));
+            }
+          }
+        }
+        children.add(_buildArea(context, widget.layout!.maximizedArea!));
+        return Stack(children: children);
       }
       if (widget.layout!.root != null) {
         return _buildArea(context, widget.layout!.root!);
@@ -89,7 +112,8 @@ class _DockingState extends State<Docking> {
           onItemClose: widget.onItemClose,
           itemCloseInterceptor: widget.itemCloseInterceptor,
           dockingButtonsBuilder: widget.dockingButtonsBuilder,
-          maximizable: widget.maximizableTabs);
+          maximizableTab: widget.maximizableTab,
+          maximizableTabsArea: widget.maximizableTabsArea);
     }
     throw UnimplementedError(
         'Unrecognized runtimeType: ' + area.runtimeType.toString());
@@ -100,14 +124,19 @@ class _DockingState extends State<Docking> {
     row.forEach((child) {
       children.add(_buildArea(context, child));
     });
+
+    List<Area> areas = [];
+    row.weights.forEach((weight) => areas.add(Area(weight: weight)));
     MultiSplitViewController controller =
-        MultiSplitViewController(weights: row.weights);
+        MultiSplitViewController(areas: areas);
+
     return MultiSplitView(
         children: children,
         axis: Axis.horizontal,
         controller: controller,
-        onSizeChange: (i1, i2) {
-          row.weights = controller.weights.toList();
+        onWeightChange: () {
+          row.weights = [];
+          controller.areas.forEach((area) => row.weights.add(area.weight!));
         });
   }
 
@@ -116,14 +145,19 @@ class _DockingState extends State<Docking> {
     column.forEach((child) {
       children.add(_buildArea(context, child));
     });
+
+    List<Area> areas = [];
+    column.weights.forEach((weight) => areas.add(Area(weight: weight)));
     MultiSplitViewController controller =
-        MultiSplitViewController(weights: column.weights);
+        MultiSplitViewController(areas: areas);
+
     return MultiSplitView(
         children: children,
         axis: Axis.vertical,
         controller: controller,
-        onSizeChange: (i1, i2) {
-          column.weights = controller.weights.toList();
+        onWeightChange: () {
+          column.weights = [];
+          controller.areas.forEach((area) => column.weights.add(area.weight!));
         });
   }
 
