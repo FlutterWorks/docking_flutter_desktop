@@ -1,4 +1,8 @@
-[![pub](https://img.shields.io/pub/v/docking.svg)](https://pub.dev/packages/docking) ![](https://github.com/caduandrade/docking_flutter/actions/workflows/test.yml/badge.svg) [![](https://img.shields.io/badge/demo-try%20it%20out-blue)](https://caduandrade.github.io/docking_flutter_demo/) [![pub2](https://img.shields.io/badge/Flutter-%E2%9D%A4-red)](https://flutter.dev/) [![](https://img.shields.io/badge/donate-crypto-green)](#support-this-project) ![](https://img.shields.io/badge/%F0%9F%91%8D%20and%20%E2%AD%90-are%20free-yellow)
+[![pub](https://img.shields.io/pub/v/docking.svg)](https://pub.dev/packages/docking)
+![](https://github.com/caduandrade/docking_flutter/actions/workflows/test.yml/badge.svg)
+[![](https://img.shields.io/badge/demo-try%20it%20out-blue)](https://caduandrade.github.io/docking_flutter_demo/)
+[![pub2](https://img.shields.io/badge/Flutter-%E2%9D%A4-red)](https://flutter.dev/)
+![](https://img.shields.io/badge/%F0%9F%91%8D%20and%20%E2%AD%90-are%20free%20and%20motivate%20me-yellow)
 
 # Docking
 
@@ -6,6 +10,13 @@ Layout for placing widgets in docking areas and arrange them into split and tabb
 
 ![](https://caduandrade.github.io/docking_flutter/docking_v3.png)
 
+## Dependencies
+
+The following dependencies are exported along with this package:
+
+* [tabbed_view (1.16.0)](https://pub.dev/packages/tabbed_view) to provide grouping of widgets into tabs
+* [multi_split_view (2.2.0)](https://pub.dev/packages/multi_split_view) to provide horizontal or vertical split views
+  
 ## Usage
 
 * [Layout](#layout)
@@ -13,7 +24,6 @@ Layout for placing widgets in docking areas and arrange them into split and tabb
   * [Column](#column)
   * [Tabs](#tabs)
   * [Combined](#combined)
-* [Dependencies](#dependencies)
 * Item
   * [Non-closable](#non-closable)
   * [Non-maximizable](#non-maximizable)
@@ -21,6 +31,7 @@ Layout for placing widgets in docking areas and arrange them into split and tabb
   * [Close listener](#close-listener)
   * [Close interceptor](#close-interceptor)
   * [Buttons](#item-buttons)
+  * [Leading widget](#item-leading-widget)
 * [Docking buttons build](#docking-buttons-build)
 * [State](#state)
 * Theme
@@ -92,15 +103,6 @@ The root is single and can be any area.
 ```
 
 ![](https://caduandrade.github.io/docking_flutter/combined_v3.png)
-
-## Dependencies
-
-This package uses two dependencies
-
-* [multi_split_view](https://pub.dev/packages/multi_split_view) to provide horizontal or vertical split views
-* [tabbed_view](https://pub.dev/packages/tabbed_view) to provide grouping of widgets into tabs
-
-To use all the features provided by these dependencies, such as themes, you may need to import them into your project.
 
 ## Item
 
@@ -232,6 +234,22 @@ Docking docking = Docking(layout: layout);
 
 ![](https://caduandrade.github.io/docking_flutter/item_buttons_v2.png)
 
+### Item leading widget
+
+```dart
+    DockingLayout layout = DockingLayout(
+        root: DockingRow([
+      DockingItem(
+          name: '1',
+          widget: child1,
+          leading: (context, status) => Icon(Icons.star, size: 16)),
+      DockingItem(name: '2', widget: child2)
+    ]));
+    Docking docking = Docking(layout: layout);
+```
+
+![](https://caduandrade.github.io/docking_flutter/item_leading_v1.png)
+
 ## Docking buttons build
 
 ```dart
@@ -288,10 +306,6 @@ You should use the *MultiSplitViewTheme* widget to apply the theme to all descen
 Read more information about themes on [multi_split_view](https://pub.dev/packages/multi_split_view).
 
 ```dart
-    import 'package:multi_split_view/multi_split_view.dart';
-```
-
-```dart
     DockingLayout layout = DockingLayout(
         root: DockingRow([
       DockingItem(name: '1', widget: child1),
@@ -323,10 +337,6 @@ Read more information about themes on [multi_split_view](https://pub.dev/package
 You should use the *TabbedViewTheme* widget to apply the theme to all descendant widgets.
 
 Read more information about themes on [tabbed_view](https://pub.dev/packages/tabbed_view).
-
-```dart
-    import 'package:tabbed_view/tabbed_view.dart';
-```
 
 ```dart
     DockingLayout layout = DockingLayout(

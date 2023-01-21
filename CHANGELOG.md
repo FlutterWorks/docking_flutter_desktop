@@ -1,3 +1,14 @@
+## 1.6.0
+
+* `multi_split_view` dependency updated to 2.2.0
+* `tabbed_view` dependency updated to 1.16.0
+* Exporting dependencies `tabbed_view` and `multi_split_view` along with this package.
+* Item leading widget.
+
+## 1.5.0
+
+* `tabbed_view` dependency updated to 1.15.0
+
 ## 1.4.1+1
 
 * `tabbed_view` dependency updated to 1.14.0+1
