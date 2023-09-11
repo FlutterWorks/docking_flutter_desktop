@@ -1,10 +1,10 @@
 import 'package:docking/src/docking_buttons_builder.dart';
 import 'package:docking/src/docking_drag.dart';
+import 'package:docking/src/internal/widgets/docking_item_widget.dart';
+import 'package:docking/src/internal/widgets/docking_tabs_widget.dart';
 import 'package:docking/src/layout/docking_layout.dart';
 import 'package:docking/src/on_item_close.dart';
 import 'package:docking/src/on_item_selection.dart';
-import 'package:docking/src/widgets/docking_item_widget.dart';
-import 'package:docking/src/widgets/docking_tabs_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import 'package:multi_split_view/multi_split_view.dart';
@@ -61,7 +61,7 @@ class _DockingState extends State<Docking> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.layout != widget.layout) {
       oldWidget.layout?.removeListener(_forceRebuild);
-      _dockingDrag.addListener(_forceRebuild);
+      widget.layout?.addListener(_forceRebuild);
     }
   }
 
@@ -73,7 +73,9 @@ class _DockingState extends State<Docking> {
         List<Widget> children = [];
         for (DockingArea area in areas) {
           if (area != widget.layout!.maximizedArea!) {
-            if (area is DockingItem && area.globalKey != null) {
+            if (area is DockingItem &&
+                area.globalKey != null &&
+                area.parent != widget.layout?.maximizedArea) {
               // keeping alive other areas
               children.add(ExcludeFocus(
                   child: Offstage(child: _buildArea(context, area))));
@@ -127,19 +129,10 @@ class _DockingState extends State<Docking> {
       children.add(_buildArea(context, child));
     });
 
-    List<Area> areas = [];
-    row.weights.forEach((weight) => areas.add(Area(weight: weight)));
-    MultiSplitViewController controller =
-        MultiSplitViewController(areas: areas);
-
     return MultiSplitView(
         children: children,
         axis: Axis.horizontal,
-        controller: controller,
-        onWeightChange: () {
-          row.weights = [];
-          controller.areas.forEach((area) => row.weights.add(area.weight!));
-        },
+        controller: row.controller,
         antiAliasingWorkaround: widget.antiAliasingWorkaround);
   }
 
@@ -149,19 +142,10 @@ class _DockingState extends State<Docking> {
       children.add(_buildArea(context, child));
     });
 
-    List<Area> areas = [];
-    column.weights.forEach((weight) => areas.add(Area(weight: weight)));
-    MultiSplitViewController controller =
-        MultiSplitViewController(areas: areas);
-
     return MultiSplitView(
         children: children,
         axis: Axis.vertical,
-        controller: controller,
-        onWeightChange: () {
-          column.weights = [];
-          controller.areas.forEach((area) => column.weights.add(area.weight!));
-        },
+        controller: column.controller,
         antiAliasingWorkaround: widget.antiAliasingWorkaround);
   }
 

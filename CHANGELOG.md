@@ -1,3 +1,38 @@
+## 1.12.2
+
+* Bugfix
+  * Error with GlobalKey when expanding a DockingTabs.
+
+## 1.11.1
+
+* Bugfix
+  * Newer tabbed_view dependency being used causing incompatibility.
+
+## 1.11.0
+
+* `DockingLayout`
+  * New method: `removeItemByIds`
+* Bugfix
+  * `Docking` is not updating itself after being instantiated with new `DockingLayout`
+
+## 1.10.0
+
+* `DockingItem`
+  * Allow changing attributes.
+  * The `clone` method has been removed.
+* `DockingLayout`
+  * New method: `findDockingItem`.
+
+## 1.9.0
+
+* `DockingRow`, `DockingColumn` and `DockingTabs`
+  * New optional constructor parameters: `size`, `weight`, `minimalWeight` and `minimalSize` 
+
+## 1.8.0
+
+* `DockingArea`
+  * Allowing to configure the initial and minimum size and weight.
+
 ## 1.7.0
 
 * `multi_split_view` dependency updated to 2.3.1

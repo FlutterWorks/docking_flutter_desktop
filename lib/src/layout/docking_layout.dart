@@ -1,16 +1,27 @@
-import 'package:docking/src/layout/add_item.dart';
-import 'package:docking/src/layout/layout_modifier.dart';
-import 'package:docking/src/layout/move_item.dart';
-import 'package:docking/src/layout/remove_item.dart';
+import 'package:docking/src/internal/layout/add_item.dart';
+import 'package:docking/src/internal/layout/layout_modifier.dart';
+import 'package:docking/src/internal/layout/move_item.dart';
+import 'package:docking/src/internal/layout/remove_item.dart';
+import 'package:docking/src/internal/layout/remove_item_by_id.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
+import 'package:multi_split_view/multi_split_view.dart';
 import 'package:tabbed_view/tabbed_view.dart';
 
 mixin DropArea {}
 
 /// Represents any area of the layout.
-abstract class DockingArea {
-  DockingArea();
+abstract class DockingArea extends Area {
+  DockingArea(
+      {double? size,
+      double? weight,
+      double? minimalWeight,
+      double? minimalSize})
+      : super(
+            size: size,
+            weight: weight,
+            minimalWeight: minimalWeight,
+            minimalSize: minimalSize);
 
   int _layoutId = -1;
 
@@ -34,7 +45,7 @@ abstract class DockingArea {
 
   bool get disposed => _disposed;
 
-  /// Disposes recursively.
+  /// Disposes.
   void _dispose() {
     _parent = null;
     _layoutId = -1;
@@ -90,6 +101,10 @@ abstract class DockingArea {
       throw StateError('Disposed area');
     }
     _parent = parentArea;
+    if (_layoutId != -1 && _layoutId != layoutId) {
+      throw ArgumentError(
+          'DockingParentArea already belongs to another layout');
+    }
     _layoutId = layoutId;
     _index = nextIndex++;
     return nextIndex;
@@ -120,7 +135,17 @@ abstract class DockingArea {
 
 /// Represents an abstract area for a collection of widgets.
 abstract class DockingParentArea extends DockingArea {
-  DockingParentArea(List<DockingArea> children) : this._children = children {
+  DockingParentArea(List<DockingArea> children,
+      {double? size,
+      double? weight,
+      double? minimalWeight,
+      double? minimalSize})
+      : this._children = children,
+        super(
+            size: size,
+            weight: weight,
+            minimalWeight: minimalWeight,
+            minimalSize: minimalSize) {
     for (DockingArea child in this._children) {
       if (child.runtimeType == this.runtimeType) {
         throw ArgumentError(
@@ -128,9 +153,6 @@ abstract class DockingParentArea extends DockingArea {
       }
       if (child.disposed) {
         throw ArgumentError('DockingParentArea cannot have disposed child');
-      }
-      if (child.layoutId != -1) {
-        throw ArgumentError('Child already belongs to another layout');
       }
     }
     if (this._children.length < 2) {
@@ -164,20 +186,16 @@ abstract class DockingParentArea extends DockingArea {
   }
 
   @override
-  void _dispose() {
-    super._dispose();
-    for (DockingArea area in _children) {
-      area._dispose();
-    }
-  }
-
-  @override
   int _updateHierarchy(
       DockingParentArea? parentArea, int nextIndex, int layoutId) {
     if (this.disposed) {
       throw StateError('Disposed area');
     }
     _parent = parentArea;
+    if (_layoutId != -1 && _layoutId != layoutId) {
+      throw ArgumentError(
+          'DockingParentArea already belongs to another layout');
+    }
     _layoutId = layoutId;
     _index = nextIndex++;
     for (DockingArea area in _children) {
@@ -219,7 +237,8 @@ abstract class DockingParentArea extends DockingArea {
 class DockingItem extends DockingArea with DropArea {
   /// Builds a [DockingItem].
   DockingItem(
-      {this.name,
+      {this.id,
+      this.name,
       required this.widget,
       this.value,
       this.closable = true,
@@ -227,50 +246,41 @@ class DockingItem extends DockingArea with DropArea {
       List<TabButton>? buttons,
       this.maximizable,
       bool maximized = false,
-      this.leading})
+      this.leading,
+      double? size,
+      double? weight,
+      double? minimalWeight,
+      double? minimalSize})
       : this.buttons = buttons != null ? List.unmodifiable(buttons) : [],
         this.globalKey = keepAlive ? GlobalKey() : null,
-        this._maximized = maximized;
+        this._maximized = maximized,
+        super(
+            size: size,
+            weight: weight,
+            minimalWeight: minimalWeight,
+            minimalSize: minimalSize);
 
-  DockingItem._(
-      {required this.name,
-      required this.widget,
-      required this.value,
-      required this.closable,
-      required this.buttons,
-      required this.globalKey,
-      required this.maximizable,
-      required bool maximized,
-      required this.leading})
-      : this._maximized = maximized;
-
-  factory DockingItem.clone(DockingItem item) {
-    return DockingItem._(
-        name: item.name,
-        widget: item.widget,
-        value: item.value,
-        closable: item.closable,
-        buttons: item.buttons,
-        globalKey: item.globalKey,
-        maximized: item.maximized,
-        maximizable: item.maximizable,
-        leading: item.leading);
-  }
-
-  final String? name;
-  final Widget widget;
-  final dynamic value;
-  final bool closable;
+  final dynamic id;
+  String? name;
+  Widget widget;
+  dynamic value;
+  bool closable;
   final bool? maximizable;
-  final List<TabButton>? buttons;
+  List<TabButton>? buttons;
   final GlobalKey? globalKey;
-  final TabLeadingBuilder? leading;
+  TabLeadingBuilder? leading;
   bool _maximized;
 
   bool get maximized => _maximized;
 
   @override
   DockingAreaType get type => DockingAreaType.item;
+
+  /// Reset parent and index in layout.
+  void _resetLocationInLayout() {
+    _parent = null;
+    _index = -1;
+  }
 
   @override
   String hierarchy(
@@ -294,12 +304,25 @@ class DockingItem extends DockingArea with DropArea {
 /// Children will be arranged horizontally.
 class DockingRow extends DockingParentArea {
   /// Builds a [DockingRow].
-  DockingRow._(List<DockingArea> children) : super(children);
-
-  List<double> weights = [];
+  DockingRow._(List<DockingArea> children,
+      {double? size,
+      double? weight,
+      double? minimalWeight,
+      double? minimalSize})
+      : super(children,
+            size: size,
+            weight: weight,
+            minimalWeight: minimalWeight,
+            minimalSize: minimalSize) {
+    controller = MultiSplitViewController(areas: children);
+  }
 
   /// Builds a [DockingRow].
-  factory DockingRow(List<DockingArea> children) {
+  factory DockingRow(List<DockingArea> children,
+      {double? size,
+      double? weight,
+      double? minimalWeight,
+      double? minimalSize}) {
     List<DockingArea> newChildren = [];
     for (DockingArea child in children) {
       if (child is DockingRow) {
@@ -308,8 +331,14 @@ class DockingRow extends DockingParentArea {
         newChildren.add(child);
       }
     }
-    return DockingRow._(newChildren);
+    return DockingRow._(newChildren,
+        size: size,
+        weight: weight,
+        minimalWeight: minimalWeight,
+        minimalSize: minimalSize);
   }
+
+  late MultiSplitViewController controller;
 
   @override
   DockingAreaType get type => DockingAreaType.row;
@@ -319,12 +348,25 @@ class DockingRow extends DockingParentArea {
 /// Children will be arranged vertically.
 class DockingColumn extends DockingParentArea {
   /// Builds a [DockingColumn].
-  DockingColumn._(List<DockingArea> children) : super(children);
-
-  List<double> weights = [];
+  DockingColumn._(List<DockingArea> children,
+      {double? size,
+      double? weight,
+      double? minimalWeight,
+      double? minimalSize})
+      : super(children,
+            size: size,
+            weight: weight,
+            minimalWeight: minimalWeight,
+            minimalSize: minimalSize) {
+    controller = MultiSplitViewController(areas: children);
+  }
 
   /// Builds a [DockingColumn].
-  factory DockingColumn(List<DockingArea> children) {
+  factory DockingColumn(List<DockingArea> children,
+      {double? size,
+      double? weight,
+      double? minimalWeight,
+      double? minimalSize}) {
     List<DockingArea> newChildren = [];
     for (DockingArea child in children) {
       if (child is DockingColumn) {
@@ -333,8 +375,14 @@ class DockingColumn extends DockingParentArea {
         newChildren.add(child);
       }
     }
-    return DockingColumn._(newChildren);
+    return DockingColumn._(newChildren,
+        size: size,
+        weight: weight,
+        minimalWeight: minimalWeight,
+        minimalSize: minimalSize);
   }
+
+  late MultiSplitViewController controller;
 
   @override
   DockingAreaType get type => DockingAreaType.column;
@@ -345,9 +393,18 @@ class DockingColumn extends DockingParentArea {
 class DockingTabs extends DockingParentArea with DropArea {
   /// Builds a [DockingTabs].
   DockingTabs(List<DockingItem> children,
-      {bool maximized = false, this.maximizable})
+      {bool maximized = false,
+      this.maximizable,
+      double? size,
+      double? weight,
+      double? minimalWeight,
+      double? minimalSize})
       : this._maximized = maximized,
-        super(children);
+        super(children,
+            size: size,
+            weight: weight,
+            minimalWeight: minimalWeight,
+            minimalSize: minimalSize);
 
   final bool? maximizable;
 
@@ -404,6 +461,11 @@ class DockingLayout extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Notifies the UI to rebuild the layout.
+  void rebuild() {
+    notifyListeners();
+  }
+
   void _reset() {
     _updateHierarchy();
     int maximizedCount = 0;
@@ -447,6 +509,28 @@ class DockingLayout extends ChangeNotifier {
   /// index and layoutId in each [DockingArea].
   _updateHierarchy() {
     _root?._updateHierarchy(null, 1, id);
+  }
+
+  /// Finds a [DockingItem] given an id.
+  DockingItem? findDockingItem(dynamic id) {
+    return _findDockingItem(parent: root, id: id);
+  }
+
+  /// Recursively finds a [DockingItem] given an id.
+  DockingItem? _findDockingItem({DockingArea? parent, dynamic id}) {
+    if (parent != null) {
+      if (parent is DockingItem && parent.id == id) {
+        return parent;
+      } else if (parent is DockingParentArea) {
+        for (DockingArea child in parent._children) {
+          DockingItem? item = _findDockingItem(parent: child, id: id);
+          if (item != null) {
+            return item;
+          }
+        }
+      }
+    }
+    return null;
   }
 
   /// Maximize a [DockingItem].
@@ -499,15 +583,26 @@ class DockingLayout extends ChangeNotifier {
       required DropArea targetArea,
       required DropPosition dropPosition}) {
     //TODO maximize test
-    _rebuild(MoveItem(
-        draggedItem: draggedItem,
-        targetArea: targetArea,
-        dropPosition: dropPosition));
+    _rebuild([
+      MoveItem(
+          draggedItem: draggedItem,
+          targetArea: targetArea,
+          dropPosition: dropPosition)
+    ]);
+  }
+
+  /// Removes multiple DockingItem by id from this layout.
+  void removeItemByIds(List<dynamic> ids) {
+    List<LayoutModifier> modifiers = [];
+    for (dynamic id in ids) {
+      modifiers.add(RemoveItemById(id: id));
+    }
+    _rebuild(modifiers);
   }
 
   /// Removes a DockingItem from this layout.
   void removeItem({required DockingItem item}) {
-    _rebuild(RemoveItem(itemToRemove: item));
+    _rebuild([RemoveItem(itemToRemove: item)]);
   }
 
   /// Adds a DockingItem to this layout.
@@ -516,8 +611,10 @@ class DockingLayout extends ChangeNotifier {
       required DropArea targetArea,
       required DropPosition dropPosition}) {
     //TODO maximize test
-    _rebuild(AddItem(
-        newItem: newItem, targetArea: targetArea, dropPosition: dropPosition));
+    _rebuild([
+      AddItem(
+          newItem: newItem, targetArea: targetArea, dropPosition: dropPosition)
+    ]);
   }
 
   /// Adds a DockingItem to the root of this layout.
@@ -528,20 +625,42 @@ class DockingLayout extends ChangeNotifier {
     }
     if (root is DropArea) {
       DropArea targetArea = root! as DropArea;
-      _rebuild(AddItem(
-          newItem: newItem,
-          targetArea: targetArea,
-          dropPosition: dropPosition));
+      _rebuild([
+        AddItem(
+            newItem: newItem,
+            targetArea: targetArea,
+            dropPosition: dropPosition)
+      ]);
     } else {
       throw StateError('Root is not a DropArea');
     }
     //TODO maximize test
   }
 
-  /// Rebuilds this layout with a modifier.
-  void _rebuild(LayoutModifier modifier) {
-    List<DockingArea> toDispose = layoutAreas();
-    _root = modifier.newLayout(this);
+  /// Rebuilds this layout with modifiers.
+  void _rebuild(List<LayoutModifier> modifiers) {
+    List<DockingArea> olderAreas = layoutAreas();
+
+    for (LayoutModifier modifier in modifiers) {
+      layoutAreas().forEach((area) {
+        if (area is DockingItem) {
+          area._resetLocationInLayout();
+        }
+      });
+
+      _root = modifier.newLayout(this);
+      _updateHierarchy();
+
+      olderAreas.forEach((area) {
+        if (area is DockingParentArea) {
+          area._dispose();
+        } else if (area is DockingItem) {
+          if (area.index == -1) {
+            area._dispose();
+          }
+        }
+      });
+    }
     _maximizedArea = null;
     layoutAreas().forEach((area) {
       if (area is DockingItem && area.maximized) {
@@ -550,8 +669,7 @@ class DockingLayout extends ChangeNotifier {
         _maximizedArea = area;
       }
     });
-    _updateHierarchy();
-    toDispose.forEach((area) => area._dispose());
+
     notifyListeners();
   }
 

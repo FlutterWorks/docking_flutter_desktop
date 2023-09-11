@@ -1,7 +1,9 @@
+import 'package:docking/src/internal/layout/layout_modifier.dart';
 import 'package:docking/src/layout/docking_layout.dart';
-import 'package:docking/src/layout/layout_modifier.dart';
+import 'package:meta/meta.dart';
 
 /// Drops a [DockingItem] in the layout.
+@internal
 class DropItem extends LayoutModifier {
   DropItem(
       {required this.dropItem,
@@ -49,25 +51,23 @@ class DropItem extends LayoutModifier {
         // ignore
         return null;
       } else if (dockingItem == targetArea) {
-        final DockingItem newDraggedItem = DockingItem.clone(dropItem);
+        final DockingItem newDraggedItem = dropItem;
         if (dropPosition == DropPosition.center) {
-          return DockingTabs([DockingItem.clone(dockingItem), newDraggedItem]);
+          return DockingTabs([dockingItem, newDraggedItem]);
         } else if (dropPosition == DropPosition.top) {
-          return DockingColumn(
-              [newDraggedItem, DockingItem.clone(dockingItem)]);
+          return DockingColumn([newDraggedItem, dockingItem]);
         } else if (dropPosition == DropPosition.bottom) {
-          return DockingColumn(
-              [DockingItem.clone(dockingItem), newDraggedItem]);
+          return DockingColumn([dockingItem, newDraggedItem]);
         } else if (dropPosition == DropPosition.left) {
-          return DockingRow([newDraggedItem, DockingItem.clone(dockingItem)]);
+          return DockingRow([newDraggedItem, dockingItem]);
         } else if (dropPosition == DropPosition.right) {
-          return DockingRow([DockingItem.clone(dockingItem), newDraggedItem]);
+          return DockingRow([dockingItem, newDraggedItem]);
         } else {
           throw ArgumentError(
               'DropPosition not recognized: ' + dropPosition.toString());
         }
       }
-      return DockingItem.clone(area);
+      return area;
     } else if (area is DockingTabs) {
       final DockingTabs dockingTabs = area;
       List<DockingItem> children = [];
@@ -76,7 +76,7 @@ class DropItem extends LayoutModifier {
           throw ArgumentError('Nested tabbed panels are not allowed.');
         }
         if (child != dropItem) {
-          children.add(DockingItem.clone(child));
+          children.add(child);
         }
       });
       final DockingArea? newArea;
@@ -89,7 +89,7 @@ class DropItem extends LayoutModifier {
         (newArea as DockingTabs).selectedIndex = dockingTabs.selectedIndex;
       }
       if (dockingTabs == targetArea) {
-        DockingItem newDraggedItem = DockingItem.clone(dropItem);
+        DockingItem newDraggedItem = dropItem;
         if (dropPosition == DropPosition.center) {
           children.add(newDraggedItem);
           DockingTabs newDockingTabs = DockingTabs(children);
@@ -123,13 +123,9 @@ class DropItem extends LayoutModifier {
         return children.first;
       }
       if (area is DockingRow) {
-        DockingRow row = DockingRow(children);
-        row.weights = area.weights;
-        return row;
+        return DockingRow(children);
       } else if (area is DockingColumn) {
-        DockingColumn column = DockingColumn(children);
-        column.weights = area.weights;
-        return column;
+        return DockingColumn(children);
       }
       throw StateError(
           'DockingArea class not recognized: ' + area.runtimeType.toString());
