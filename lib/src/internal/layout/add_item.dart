@@ -1,5 +1,6 @@
 import 'package:docking/src/internal/layout/drop_item.dart';
 import 'package:docking/src/layout/docking_layout.dart';
+import 'package:docking/src/layout/drop_position.dart';
 import 'package:meta/meta.dart';
 
 /// Adds [DockingItem] to the layout.
@@ -8,11 +9,13 @@ class AddItem extends DropItem {
   AddItem(
       {required DockingItem newItem,
       required DropArea targetArea,
-      required DropPosition dropPosition})
+      DropPosition? dropPosition,
+      int? dropIndex})
       : super(
             dropItem: newItem,
             targetArea: targetArea,
-            dropPosition: dropPosition);
+            dropPosition: dropPosition,
+            dropIndex: dropIndex);
 
   @override
   void validateDropItem(DockingLayout layout, DockingArea area) {
