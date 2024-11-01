@@ -1,3 +1,13 @@
+## 1.16.1
+
+* Bugfix
+  * The `removeItemById` method does not preserving id.
+
+## 1.16.0
+
+* `Docking`
+  * Allow to disable draggable
+
 ## 1.15.0
 
 * `DockingLayout`
